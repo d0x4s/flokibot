@@ -11,8 +11,8 @@ SELL_THRESHOLD = 0.02    # 2% rise triggers sell
 EURO_PER_TRADE = 1
 CHECK_INTERVAL = 15      # 15 seconds between checks
 
-PUSHOVER_USER_KEY = "your-user-key"
-PUSHOVER_API_TOKEN = "your-app-token"
+PUSHOVER_USER_KEY = "ufz9mrfs1yzzicun13m42ztdx55pd4"
+PUSHOVER_API_TOKEN = "a3defywpn6sneh9gc3vfn27eifvfnm"
 TRADE_LOG_FILE = "trades.json"
 
 # --- Flask Server for Render ---
