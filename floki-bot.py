@@ -11,8 +11,8 @@ SELL_THRESHOLD = 0.02    # 2% rise triggers sell
 EURO_PER_TRADE = 1
 CHECK_INTERVAL = 15      # 15 seconds between checks
 
-PUSHOVER_USER_KEY = "ufz9mrfs1yzzicun13m42ztdx55pd4"
-PUSHOVER_API_TOKEN = "a3defywpn6sneh9gc3vfn27eifvfnm"
+PUSHOVER_USER_KEY = "your-user-key"
+PUSHOVER_API_TOKEN = "your-app-token"
 TRADE_LOG_FILE = "trades.json"
 
 # --- Flask Server for Render ---
@@ -82,4 +82,65 @@ def simulate_buy(price):
     trade = {
         "type": "BUY",
         "timestamp": datetime.now().isoformat(),
-        "price":
+        "price": price,
+        "amount": floki_amount,
+        "euro": EURO_PER_TRADE
+    }
+    log_trade(trade)
+    print(f"[BUY] €{EURO_PER_TRADE:.2f} of FLOKI at ${price:.8f}")
+    send_push("FLOKI BOT – BUY", f"Bought €{EURO_PER_TRADE:.2f} at ${price:.8f}")
+
+def simulate_sell(price):
+    global portfolio, total_profit
+    proceeds = portfolio["balance"] * price
+    profit = proceeds - (EURO_PER_TRADE * len(portfolio["holdings"]))
+    total_profit += profit
+
+    trade = {
+        "type": "SELL",
+        "timestamp": datetime.now().isoformat(),
+        "price": price,
+        "amount": portfolio["balance"],
+        "proceeds": proceeds,
+        "profit": profit,
+        "total_profit": total_profit
+    }
+    log_trade(trade)
+
+    print(f"[SELL] {portfolio['balance']:.2f} FLOKI at ${price:.8f} → €{proceeds:.2f} (profit: €{profit:.2f})")
+    print(f"💰 Total simulated profit: €{total_profit:.2f}")
+    send_push("FLOKI BOT – SELL", f"Sold {portfolio['balance']:.2f} FLOKI at ${price:.8f}\nProfit: €{profit:.2f}")
+
+    portfolio["holdings"].clear()
+    portfolio["balance"] = 0
+    portfolio["average_price"] = 0
+    portfolio["last_buy_price"] = None
+
+# --- Main Loop ---
+def bot_loop():
+    while True:
+        price = get_floki_price()
+        if price is None:
+            time.sleep(CHECK_INTERVAL)
+            continue
+
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Price: ${price:.8f}")
+
+        if portfolio["last_buy_price"] is None:
+            simulate_buy(price)
+        else:
+            drop = (portfolio["last_buy_price"] - price) / portfolio["last_buy_price"]
+            rise = (price - portfolio["average_price"]) / portfolio["average_price"] if portfolio["average_price"] else 0
+
+            if drop >= BUY_THRESHOLD:
+                simulate_buy(price)
+
+            if rise >= SELL_THRESHOLD:
+                simulate_sell(price)
+
+        time.sleep(CHECK_INTERVAL)
+
+# --- Start Flask + Bot ---
+if __name__ == "__main__":
+    threading.Thread(target=start_server).start()
+    bot_loop()
